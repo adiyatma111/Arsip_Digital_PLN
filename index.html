@@ -64,7 +64,6 @@
         border-right: 1px solid rgba(255, 255, 255, 0.1);
         padding: 30px 20px;
         display: flex;
-        flex-column: justify;
         flex-direction: column;
         justify-content: space-between;
         position: fixed;
@@ -84,7 +83,7 @@
 
       /* Konten Utama di sebelah kanan */
       .main-content-panel {
-        margin-left: 280px; /* Memberi ruang untuk sidebar fixed */
+        margin-left: 280px;
         flex: 1;
         padding: 40px;
         max-width: 1300px;
@@ -170,7 +169,6 @@
         opacity: 0.75;
       }
 
-      /* Pengaturan Nav Pills Tegak Kiri (Vertical) */
       .nav-pills-vertical {
         display: flex;
         flex-direction: column;
@@ -592,10 +590,36 @@
       var bsModalEditUser = null;
       var bsModalTambahUser = null;
 
+      // MENANGANI EVENT SAAT BROWSER DI-REFRESH
       window.addEventListener('DOMContentLoaded', function() {
         bsModalEdit = new bootstrap.Modal(document.getElementById('modalEditArsip'));
         bsModalEditUser = new bootstrap.Modal(document.getElementById('modalEditUser'));
         bsModalTambahUser = new bootstrap.Modal(document.getElementById('modalTambahUser'));
+
+        // Cek data session di localStorage
+        var savedUser = localStorage.getItem("pln_session_user");
+        var savedRole = localStorage.getItem("pln_session_role");
+        var savedDivisi = localStorage.getItem("pln_session_divisi");
+        var savedPage = localStorage.getItem("pln_active_page");
+
+        if (savedUser && savedRole) {
+          sessionUser = savedUser;
+          sessionRole = savedRole;
+          sessionDivisi = savedDivisi || "";
+
+          document.getElementById('userDisplay').innerText = sessionUser + " (" + sessionRole + ")";
+          document.getElementById('loginScreen').classList.add('d-none');
+          document.getElementById('mainScreen').classList.remove('d-none');
+          
+          terapkanHakAksesUI();
+          muatDataTabel();
+
+          if (savedPage) {
+            switchPage(savedPage);
+          } else {
+            switchPage('pageInput');
+          }
+        }
       });
 
       // Mengubah visibility password (Lihat / Sembunyikan dengan ikon mata)
@@ -614,7 +638,7 @@
         }
       }
 
-      // Navigasi halaman vertikal
+      // Navigasi halaman vertikal + simpan riwayat tab
       function switchPage(pageId) {
         document.getElementById('pageInput').classList.add('d-none');
         document.getElementById('pageSearch').classList.add('d-none');
@@ -623,6 +647,8 @@
         
         var links = document.querySelectorAll('.nav-pills-vertical .nav-link');
         links.forEach(btn => btn.classList.remove('active'));
+        
+        localStorage.setItem("pln_active_page", pageId);
         
         if(pageId === 'pageInput') document.getElementById('btnPageInput').classList.add('active');
         if(pageId === 'pageSearch') document.getElementById('btnPageSearch').classList.add('active');
@@ -646,12 +672,19 @@
             sessionRole = res.role;
             sessionDivisi = res.divisi || "";
             
+            // Simpan ke memori browser agar ketika di-refresh tidak hilang
+            localStorage.setItem("pln_session_user", res.username);
+            localStorage.setItem("pln_session_role", res.role);
+            localStorage.setItem("pln_session_divisi", res.divisi || "");
+            localStorage.setItem("pln_active_page", "pageInput");
+
             document.getElementById('userDisplay').innerText = res.username + " (" + res.role + ")";
             document.getElementById('loginScreen').classList.add('d-none');
             document.getElementById('mainScreen').classList.remove('d-none');
             
             terapkanHakAksesUI();
             muatDataTabel();
+            switchPage('pageInput');
           } else {
             notifLogin.innerHTML = '<div class="alert alert-danger py-2 text-center small m-0"><i class="fa-solid fa-triangle-exclamation me-2"></i> ' + res.message + '</div>';
           }
@@ -695,6 +728,12 @@
         document.getElementById('formLogin').reset();
         document.getElementById('loginNotif').innerHTML = "";
         
+        // Bersihkan memori localStorage browser saat logout
+        localStorage.removeItem("pln_session_user");
+        localStorage.removeItem("pln_session_role");
+        localStorage.removeItem("pln_session_divisi");
+        localStorage.removeItem("pln_active_page");
+
         var loginPassInput = document.getElementById('password');
         loginPassInput.type = "password";
         var loginPassIcon = loginPassInput.nextElementSibling.querySelector('i');
