@@ -313,7 +313,7 @@
               </div>
               
               <div class="col-md-6 mb-4">
-                <label class="form-label">Upload File Dokumen (PDF)</label>
+                <label class="form-label">Upload File Dokumen (PDF - Maks 5MB)</label>
                 <div class="input-group">
                   <span class="input-group-text"><i class="fa-solid fa-file-pdf"></i></span>
                   <input type="file" class="form-control" id="filePdf" accept="application/pdf" required>
@@ -1160,7 +1160,7 @@
         }
       });
 
-      // PROSES SIMPAN DATA ARSIP DENGAN UNGGAN FILE PDF AUTOMATIS
+      // PROSES SIMPAN DATA ARSIP DENGAN UNGGAN FILE PDF AUTOMATIS (DILENGKAPI BATASAN SIZE)
       document.getElementById('formArsip').addEventListener('submit', function(e) {
         e.preventDefault();
         
@@ -1169,7 +1169,14 @@
         var notifDiv = document.getElementById('notifikasi');
         
         if (!file) {
-          notifDiv.innerHTML = '<div class="alert alert-warning text-center shadow-sm">Pilih file PDF terlebih dahulu!</div>';
+          notifDiv.innerHTML = '<div class="alert alert-warning text-center shadow-sm"><i class="fa-solid fa-triangle-exclamation me-2"></i> Pilih file PDF terlebih dahulu!</div>';
+          return;
+        }
+
+        // --- PENGECEKAN UKURAN FILE (BATAS MAKSIMAL 5 MB) ---
+        var maxSizeBytes = 5 * 1024 * 1024; // 5 MB
+        if (file.size > maxSizeBytes) {
+          notifDiv.innerHTML = '<div class="alert alert-danger text-center shadow-sm"><i class="fa-solid fa-circle-exclamation me-2"></i> Ukuran file terlalu besar! Maksimal ukuran file PDF adalah <b>5 MB</b>.</div>';
           return;
         }
 
