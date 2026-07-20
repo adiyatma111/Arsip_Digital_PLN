@@ -1,4 +1,7 @@
 function doGet() {
+  // Pemicu otorisasi izin Drive saat aplikasi pertama kali dijalankan
+  DriveApp.getRootFolder();
+
   return HtmlService.createTemplateFromFile('index')
       .evaluate()
       .setTitle('Sistem Arsip Digital')
@@ -173,6 +176,31 @@ function ambilDataArsip(userDivisi, userRole) {
   }
 }
 
+// FUNGSI UNTUK UNGGAN FILE PDF KE GOOGLE DRIVE
+function uploadFileToDrive(base64Data, fileName) {
+  try {
+    var splitData = base64Data.split(',');
+    var contentType = splitData[0].match(/:(.*?);/)[1];
+    var fileData = Utilities.base64Decode(splitData[1]);
+    
+    var blob = Utilities.newBlob(fileData, contentType, fileName);
+    var file = DriveApp.createFile(blob);
+    
+    // Set hak akses file publik agar bisa dibuka dari tabel
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    
+    return {
+      status: "success",
+      url: file.getUrl()
+    };
+  } catch (error) {
+    return {
+      status: "error",
+      message: "Gagal mengunggah file PDF: " + error.toString()
+    };
+  }
+}
+
 function simpanArsip(data) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -184,9 +212,9 @@ function simpanArsip(data) {
       sheet.appendRow(["Divisi", "Nama Dokumen", "Tempat Peletakan", "Masa Retensi", "Link File", "User Input"]);
     }
     
-    var objekMasaRetensi = new Date(data.masaRetensi);
+    // PERBAIKAN: Langsung memasukkan data.masaRetensi (string YYYY-MM-DD) tanpa objek new Date()
     sheet.appendRow([
-      data.divisi, data.namaDokumen, data.kategori, objekMasaRetensi, data.linkFile, data.userInput
+      data.divisi, data.namaDokumen, data.kategori, data.masaRetensi, data.linkFile, data.userInput
     ]);
     
     sortSheetRetensi(sheet);
@@ -245,8 +273,8 @@ function updateArsipWeb(dataLama, dataBaru, userRole, currentUsername) {
     }
     
     if (barisDitemukan === -1) return { status: "error", message: "Data asli tidak ditemukan." };
-    var objekMasaRetensi = new Date(dataBaru.masaRetensi);
     
+    // PERBAIKAN: Menggunakan dataBaru.masaRetensi langsung tanpa new Date()
     if (dataLama.kategori !== dataBaru.kategori) {
       sheetLama.deleteRow(barisDitemukan);
       if (!sheetBaru) {
@@ -254,12 +282,12 @@ function updateArsipWeb(dataLama, dataBaru, userRole, currentUsername) {
         sheetBaru.appendRow(["Divisi", "Nama Dokumen", "Tempat Peletakan", "Masa Retensi", "Link File", "User Input"]);
       }
       sheetBaru.appendRow([
-        dataBaru.divisi, dataBaru.namaDokumen, dataBaru.kategori, objekMasaRetensi, dataBaru.linkFile, dataLama.userInput
+        dataBaru.divisi, dataBaru.namaDokumen, dataBaru.kategori, dataBaru.masaRetensi, dataBaru.linkFile, dataLama.userInput
       ]);
       sortSheetRetensi(sheetBaru);
     } else {
       sheetLama.getRange(barisDitemukan, 1, 1, 6).setValues([[
-        dataBaru.divisi, dataBaru.namaDokumen, dataBaru.kategori, objekMasaRetensi, dataBaru.linkFile, dataLama.userInput
+        dataBaru.divisi, dataBaru.namaDokumen, dataBaru.kategori, dataBaru.masaRetensi, dataBaru.linkFile, dataLama.userInput
       ]]);
       sortSheetRetensi(sheetLama);
     }
