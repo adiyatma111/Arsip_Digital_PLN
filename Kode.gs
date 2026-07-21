@@ -1,5 +1,4 @@
 function doGet() {
-  // Pemicu otorisasi izin Drive saat aplikasi pertama kali dijalankan
   DriveApp.getRootFolder();
 
   return HtmlService.createTemplateFromFile('index')
@@ -176,15 +175,28 @@ function ambilDataArsip(userDivisi, userRole) {
   }
 }
 
-// FUNGSI UNTUK UNGGAN FILE PDF KE GOOGLE DRIVE
-function uploadFileToDrive(base64Data, fileName) {
+// FUNGSI UNTUK UNGGAN FILE PDF KE GOOGLE DRIVE DENGAN FOLDER OTOMATIS
+function uploadFileToDrive(base64Data, fileName, divisi, masaRetensi) {
   try {
     var splitData = base64Data.split(',');
     var contentType = splitData[0].match(/:(.*?);/)[1];
     var fileData = Utilities.base64Decode(splitData[1]);
-    
     var blob = Utilities.newBlob(fileData, contentType, fileName);
-    var file = DriveApp.createFile(blob);
+    
+    // Ambil tahun dari Masa Retensi (atau tahun berjalan jika kosong)
+    var tahun = new Date().getFullYear().toString();
+    if (masaRetensi) {
+      var thnRetensi = masaRetensi.split('-')[0];
+      if (thnRetensi && thnRetensi.length === 4) {
+        tahun = thnRetensi;
+      }
+    }
+    
+    // Dapatkan folder tujuan hirarki (Arsip Digital PLN > Divisi > Tahun)
+    var targetFolder = getFolderTujuan(divisi, tahun);
+    
+    // Simpan file ke folder tujuan
+    var file = targetFolder.createFile(blob);
     
     // Set hak akses file publik agar bisa dibuka dari tabel
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
@@ -201,6 +213,26 @@ function uploadFileToDrive(base64Data, fileName) {
   }
 }
 
+// HELPER FUNCTION: Dapatkan/Buat Hirarki Folder di Drive
+function getFolderTujuan(divisi, tahun) {
+  var parentName = "Arsip Digital PLN";
+  var divisiName = divisi ? "Divisi " + divisi : "Umum";
+  
+  // 1. Cek / Buat Folder Utama "Arsip Digital PLN"
+  var mainFolders = DriveApp.getFoldersByName(parentName);
+  var mainFolder = mainFolders.hasNext() ? mainFolders.next() : DriveApp.createFolder(parentName);
+  
+  // 2. Cek / Buat Sub-folder Divisi
+  var divisiFolders = mainFolder.getFoldersByName(divisiName);
+  var divisiFolder = divisiFolders.hasNext() ? divisiFolders.next() : mainFolder.createFolder(divisiName);
+  
+  // 3. Cek / Buat Sub-folder Tahun
+  var tahunFolders = divisiFolder.getFoldersByName(tahun);
+  var tahunFolder = tahunFolders.hasNext() ? tahunFolders.next() : divisiFolder.createFolder(tahun);
+  
+  return tahunFolder;
+}
+
 function simpanArsip(data) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -212,7 +244,6 @@ function simpanArsip(data) {
       sheet.appendRow(["Divisi", "Nama Dokumen", "Tempat Peletakan", "Masa Retensi", "Link File", "User Input"]);
     }
     
-    // PERBAIKAN: Langsung memasukkan data.masaRetensi (string YYYY-MM-DD) tanpa objek new Date()
     sheet.appendRow([
       data.divisi, data.namaDokumen, data.kategori, data.masaRetensi, data.linkFile, data.userInput
     ]);
@@ -274,7 +305,6 @@ function updateArsipWeb(dataLama, dataBaru, userRole, currentUsername) {
     
     if (barisDitemukan === -1) return { status: "error", message: "Data asli tidak ditemukan." };
     
-    // PERBAIKAN: Menggunakan dataBaru.masaRetensi langsung tanpa new Date()
     if (dataLama.kategori !== dataBaru.kategori) {
       sheetLama.deleteRow(barisDitemukan);
       if (!sheetBaru) {

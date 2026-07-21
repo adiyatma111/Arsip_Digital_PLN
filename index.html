@@ -8,6 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     
     <style>
       body { 
@@ -312,15 +313,16 @@
                 </div>
               </div>
               
-              <div class="col-md-6 mb-4">
+              <div class="col-md-6 mb-3">
                 <label class="form-label">Upload File Dokumen (PDF - Maks 5MB)</label>
                 <div class="input-group">
                   <span class="input-group-text"><i class="fa-solid fa-file-pdf"></i></span>
-                  <input type="file" class="form-control" id="filePdf" accept="application/pdf" required>
+                  <input type="file" class="form-control" id="filePdf" accept="application/pdf" required onchange="cekUkuranFilePdf(this)">
                 </div>
+                <div id="fileSizeInfo" class="form-text mt-1 fw-bold"></div>
               </div>
             </div>
-            <button type="submit" class="btn btn-pln w-100">
+            <button type="submit" id="btnSubmitArsip" class="btn btn-pln w-100">
               <i class="fa-solid fa-cloud-arrow-up me-2"></i> Unggah & Simpan Dokumen
             </button>
           </form>
@@ -342,6 +344,9 @@
                 <option value="SEMUA">Semua Lemari</option>
               </select>
               <input type="text" id="cariDokumen" class="form-control style-search" placeholder="Cari Lemari / Nama / Tanggal..." style="border-left: 1px solid #cbd5e1; border-radius: 12px; width: 200px; padding: 6px 12px; font-size: 0.9rem;">
+              <button class="btn btn-success btn-sm px-3" onclick="exportDataToExcel()" style="border-radius: 12px; font-weight: 600;">
+                <i class="fa-solid fa-file-excel me-2"></i> Export Excel
+              </button>
             </div>
           </div>
           
@@ -353,7 +358,7 @@
                   <th>Nama Dokumen</th>
                   <th>Lokasi Peletakan</th>
                   <th>Masa Retensi</th>
-                  <th>Link Akses</th>
+                  <th class="text-center">Akses PDF</th>
                   <th>User Input</th>
                   <th class="text-center">Aksi</th>
                 </tr>
@@ -409,11 +414,26 @@
             <div class="col-6 col-md-2.4 flex-fill"><div class="stat-card"><p>Sistem Informasi (IT)</p><h4 id="statIT">0</h4></div></div>
             <div class="col-6 col-md-2.4 flex-fill"><div class="stat-card" style="background: linear-gradient(135deg, rgba(0, 180, 216, 0.3), rgba(0, 119, 182, 0.3)); border-color: #00b4d8;"><p>Total Arsip</p><h4 id="statTotal">0</h4></div></div>
           </div>
-          
-          <div id="containerStatLemari" class="row g-3 text-white">
-          </div>
+          <div id="containerStatLemari" class="row g-3 text-white"></div>
         </div>
 
+      </div>
+    </div>
+
+    <div class="modal fade text-dark" id="modalPreviewPdf" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-centered" style="height: 90vh;">
+        <div class="modal-content h-100" style="border-radius: 20px; overflow: hidden;">
+          <div class="modal-header bg-dark text-white py-2">
+            <h6 class="modal-title fw-bold" id="titlePreviewPdf"><i class="fa-solid fa-file-pdf me-2 text-danger"></i>Preview Dokumen</h6>
+            <div class="d-flex align-items-center gap-2 ms-auto me-3">
+              <a id="btnBukaTabBaruPdf" href="#" target="_blank" class="btn btn-sm btn-outline-light"><i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Buka Tab Baru</a>
+            </div>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body p-0 bg-secondary position-relative">
+            <iframe id="iframePdf" src="" style="width:100%; height:100%; border:none;"></iframe>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -441,8 +461,7 @@
               </div>
               <div class="mb-3">
                 <label class="form-label">Lokasi Lemari</label>
-                <select class="form-select shadow-sm" id="editKategori" required>
-                </select>
+                <select class="form-select shadow-sm" id="editKategori" required></select>
               </div>
               <div class="mb-3">
                 <label class="form-label">Masa Retensi</label>
@@ -606,17 +625,41 @@
       var bsModalEditUser = null;
       var bsModalTambahUser = null;
       var bsModalTambahLemari = null;
+      var bsModalPreviewPdf = null;
+
+      var inactivityTimer;
 
       window.addEventListener('DOMContentLoaded', function() {
         bsModalEdit = new bootstrap.Modal(document.getElementById('modalEditArsip'));
         bsModalEditUser = new bootstrap.Modal(document.getElementById('modalEditUser'));
         bsModalTambahUser = new bootstrap.Modal(document.getElementById('modalTambahUser'));
         bsModalTambahLemari = new bootstrap.Modal(document.getElementById('modalTambahLemari'));
+        bsModalPreviewPdf = new bootstrap.Modal(document.getElementById('modalPreviewPdf'));
+
+        // DETEKSI LOGOUT OTOMATIS SAAT TAB DITUTUP
+        var tabActiveFlag = sessionStorage.getItem("pln_tab_active");
+
+        if (!tabActiveFlag) {
+          localStorage.removeItem("pln_session_user");
+          localStorage.removeItem("pln_session_role");
+          localStorage.removeItem("pln_session_divisi");
+          localStorage.removeItem("pln_active_page");
+          localStorage.removeItem("pln_last_activity");
+        }
+
+        sessionStorage.setItem("pln_tab_active", "true");
 
         var savedUser = localStorage.getItem("pln_session_user");
         var savedRole = localStorage.getItem("pln_session_role");
         var savedDivisi = localStorage.getItem("pln_session_divisi");
         var savedPage = localStorage.getItem("pln_active_page");
+        var lastActivity = localStorage.getItem("pln_last_activity");
+
+        var now = Date.now();
+        if (lastActivity && (now - parseInt(lastActivity)) > 900000) {
+          eksekusiLogout("timeout");
+          return;
+        }
 
         if (savedUser && savedRole) {
           sessionUser = savedUser;
@@ -635,8 +678,88 @@
           } else {
             switchPage('pageInput');
           }
+
+          resetInactivityTimer();
         }
       });
+
+      // FITUR POIN 3: PREVIEW PDF DIRECT DALAM MODAL
+      function bukaPreviewPdf(namaDokumen, urlDrive) {
+        document.getElementById('titlePreviewPdf').innerHTML = `<i class="fa-solid fa-file-pdf me-2 text-danger"></i> ${namaDokumen}`;
+        document.getElementById('btnBukaTabBaruPdf').href = urlDrive;
+        
+        // Ubah URL Drive view biasa ke mode embed/preview Google Drive
+        var embedUrl = urlDrive.replace(/\/view(\?.*)?$/, '/preview');
+        if (!embedUrl.includes('/preview')) {
+          embedUrl = urlDrive;
+        }
+        
+        document.getElementById('iframePdf').src = embedUrl;
+        bsModalPreviewPdf.show();
+      }
+
+      // FITUR POIN 3: INDIKATOR REAL-TIME UKURAN FILE PDF
+      function cekUkuranFilePdf(input) {
+        var fileInfo = document.getElementById('fileSizeInfo');
+        var btnSubmit = document.getElementById('btnSubmitArsip');
+        
+        if (input.files && input.files[0]) {
+          var file = input.files[0];
+          var sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+          
+          if (file.size > 5 * 1024 * 1024) {
+            fileInfo.className = "form-text mt-1 fw-bold text-danger";
+            fileInfo.innerHTML = `<i class="fa-solid fa-circle-xmark me-1"></i> Ukuran file: ${sizeMB} MB (Melebihi batas 5MB!)`;
+            btnSubmit.setAttribute('disabled', 'true');
+          } else {
+            fileInfo.className = "form-text mt-1 fw-bold text-success";
+            fileInfo.innerHTML = `<i class="fa-solid fa-circle-check me-1"></i> Ukuran file: ${sizeMB} MB (Memenuhi syarat)`;
+            btnSubmit.removeAttribute('disabled');
+          }
+        } else {
+          fileInfo.innerHTML = "";
+          btnSubmit.removeAttribute('disabled');
+        }
+      }
+
+      // FITUR POIN 3: EXPORT TABLE DATA TO EXCEL
+      function exportDataToExcel() {
+        if (!filteredDataArsip || filteredDataArsip.length === 0) {
+          alert("Tidak ada data dokumen untuk diexport!");
+          return;
+        }
+
+        // Format data yang rapi untuk Excel
+        var excelData = filteredDataArsip.map(function(item, idx) {
+          return {
+            "No": idx + 1,
+            "Divisi Pemilik": item.divisi,
+            "Nama Dokumen": item.namaDokumen,
+            "Lokasi Lemari": item.kategori,
+            "Masa Retensi": item.masaRetensi,
+            "Link Google Drive": item.linkFile,
+            "User Penginput": item.userInput
+          };
+        });
+
+        var worksheet = XLSX.utils.json_to_sheet(excelData);
+        var workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Data Arsip");
+
+        // Format Lebar Kolom Otomatis
+        worksheet['!cols'] = [
+          { wch: 5 },  // No
+          { wch: 20 }, // Divisi
+          { wch: 35 }, // Nama
+          { wch: 18 }, // Lemari
+          { wch: 15 }, // Retensi
+          { wch: 45 }, // Link
+          { wch: 18 }  // User
+        ];
+
+        var tglFormat = new Date().toISOString().slice(0, 10);
+        XLSX.writeFile(workbook, `Data_Arsip_PLN_${tglFormat}.xlsx`);
+      }
 
       function togglePasswordVisibility(inputId, buttonEl) {
         var inputField = document.getElementById(inputId);
@@ -689,6 +812,9 @@
             localStorage.setItem("pln_session_role", res.role);
             localStorage.setItem("pln_session_divisi", res.divisi || "");
             localStorage.setItem("pln_active_page", "pageInput");
+            localStorage.setItem("pln_last_activity", Date.now().toString());
+
+            sessionStorage.setItem("pln_tab_active", "true");
 
             document.getElementById('userDisplay').innerText = res.username + " (" + res.role + ")";
             document.getElementById('loginScreen').classList.add('d-none');
@@ -697,6 +823,8 @@
             terapkanHakAksesUI();
             muatDataTabel();
             switchPage('pageInput');
+
+            resetInactivityTimer();
           } else {
             notifLogin.innerHTML = '<div class="alert alert-danger py-2 text-center small m-0"><i class="fa-solid fa-triangle-exclamation me-2"></i> ' + res.message + '</div>';
           }
@@ -737,15 +865,24 @@
         }
       }
 
-      document.getElementById('btnLogout').addEventListener('click', function() {
+      function eksekusiLogout(pesanAtauReason) {
         sessionUser = ""; sessionRole = ""; sessionDivisi = "";
+        clearTimeout(inactivityTimer);
+        
         document.getElementById('formLogin').reset();
-        document.getElementById('loginNotif').innerHTML = "";
+        
+        if (pesanAtauReason === "timeout") {
+          document.getElementById('loginNotif').innerHTML = '<div class="alert alert-warning py-2 text-center small m-0"><i class="fa-solid fa-clock me-2"></i> Sesi Anda telah berakhir karena tidak ada aktivitas selama 15 menit. Silakan login kembali.</div>';
+        } else {
+          document.getElementById('loginNotif').innerHTML = "";
+        }
         
         localStorage.removeItem("pln_session_user");
         localStorage.removeItem("pln_session_role");
         localStorage.removeItem("pln_session_divisi");
         localStorage.removeItem("pln_active_page");
+        localStorage.removeItem("pln_last_activity");
+        sessionStorage.removeItem("pln_tab_active");
 
         var loginPassInput = document.getElementById('password');
         loginPassInput.type = "password";
@@ -755,6 +892,10 @@
         document.getElementById('mainScreen').classList.add('d-none');
         document.getElementById('loginScreen').classList.remove('d-none');
         switchPage('pageInput');
+      }
+
+      document.getElementById('btnLogout').addEventListener('click', function() {
+        eksekusiLogout("manual");
       });
 
       function updateDropdownLemari(lemariList) {
@@ -781,15 +922,6 @@
         if (valInputLama) selFormInput.value = valInputLama;
         if (valFilterLama) selFilter.value = valFilterLama;
         if (valEditLama) selEdit.value = valEditLama;
-
-        // Mengaktifkan fitur Scroll pada dropdown jika pilihan lemari lebih dari 5
-        [selFormInput, selFilter, selEdit].forEach(function(selectEl) {
-          if (lemariList.length > 5) {
-            selectEl.addEventListener('focus', function() { this.size = 5; });
-            selectEl.addEventListener('blur', function() { this.size = 1; });
-            selectEl.addEventListener('change', function() { this.size = 1; this.blur(); });
-          }
-        });
       }
 
       function renderStatistikLemari(statistik, lemariList) {
@@ -861,12 +993,22 @@
               tombolAksiHtml = `<span class="text-muted small">-</span>`;
             }
 
+            // DENGAN TOMBOL PREVIEW PDF DI TABEL
             tr.innerHTML = `
               <td><span class="badge bg-secondary p-2">${item.divisi}</span></td>
               <td class="fw-semibold">${item.namaDokumen}</td>
               <td><i class="fa-solid fa-box text-warning me-1"></i> ${item.kategori}</td>
               <td class="fw-bold text-danger">${item.masaRetensi}</td>
-              <td><a href="${item.linkFile}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-arrow-up-right-from-square"></i> Buka PDF</a></td>
+              <td class="text-center">
+                <div class="btn-group btn-group-sm">
+                  <button type="button" class="btn btn-sm btn-primary" onclick="bukaPreviewPdf('${item.namaDokumen}', '${item.linkFile}')">
+                    <i class="fa-solid fa-eye me-1"></i> Preview
+                  </button>
+                  <a href="${item.linkFile}" target="_blank" class="btn btn-sm btn-outline-primary">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                  </a>
+                </div>
+              </td>
               <td class="text-muted small">${item.userInput}</td>
               <td class="text-center">${tombolAksiHtml}</td>
             `;
@@ -1160,7 +1302,6 @@
         }
       });
 
-      // PROSES SIMPAN DATA ARSIP DENGAN UNGGAN FILE PDF AUTOMATIS (DILENGKAPI BATASAN SIZE)
       document.getElementById('formArsip').addEventListener('submit', function(e) {
         e.preventDefault();
         
@@ -1173,7 +1314,6 @@
           return;
         }
 
-        // --- PENGECEKAN UKURAN FILE (BATAS MAKSIMAL 5 MB) ---
         var maxSizeBytes = 5 * 1024 * 1024; // 5 MB
         if (file.size > maxSizeBytes) {
           notifDiv.innerHTML = '<div class="alert alert-danger text-center shadow-sm"><i class="fa-solid fa-circle-exclamation me-2"></i> Ukuran file terlalu besar! Maksimal ukuran file PDF adalah <b>5 MB</b>.</div>';
@@ -1186,7 +1326,6 @@
         reader.onload = function(evt) {
           var base64Data = evt.target.result;
           
-          // Step 1: Upload File PDF ke Google Drive melalui Google Apps Script
           google.script.run.withSuccessHandler(function(resUpload) {
             if (resUpload.status === "success") {
               
@@ -1197,11 +1336,10 @@
                 namaDokumen: document.getElementById('namaDokumen').value,
                 kategori: document.getElementById('kategori').value,
                 masaRetensi: document.getElementById('masaRetensi').value,
-                linkFile: resUpload.url, // Link otomatis hasil dari Drive
+                linkFile: resUpload.url,
                 userInput: sessionUser
               };
               
-              // Step 2: Simpan Data ke Spreadsheet
               google.script.run.withSuccessHandler(function(res) {
                 if(res.status === "success") {
                   notifDiv.innerHTML = '<div class="alert alert-success text-center shadow-sm"><i class="fa-solid fa-circle-check me-2"></i> ' + res.message + '</div>';
@@ -1209,6 +1347,7 @@
                   document.getElementById('kategori').value = "";
                   document.getElementById('masaRetensi').value = "";
                   document.getElementById('filePdf').value = "";
+                  document.getElementById('fileSizeInfo').innerHTML = "";
                   muatDataTabel();
                 } else {
                   notifDiv.innerHTML = '<div class="alert alert-danger text-center shadow-sm"><i class="fa-solid fa-circle-exclamation me-2"></i> Gagal simpan: ' + res.message + '</div>';
@@ -1222,6 +1361,20 @@
         };
         
         reader.readAsDataURL(file);
+      });
+
+      function resetInactivityTimer() {
+        if (!sessionUser) return;
+        localStorage.setItem("pln_last_activity", Date.now().toString());
+
+        clearTimeout(inactivityTimer);
+        inactivityTimer = setTimeout(function() {
+          eksekusiLogout("timeout");
+        }, 900000);
+      }
+
+      ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'].forEach(function(eventName) {
+        window.addEventListener(eventName, resetInactivityTimer, true);
       });
     </script>
   </body>
