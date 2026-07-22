@@ -16,7 +16,7 @@ function getorceretmaindra() {
   var sheetUsers = ss.getSheetByName("Users");
   if (!sheetUsers) {
     sheetUsers = ss.insertSheet("Users");
-    sheetUsers.appendRow(["Username", "Password", "Role", "Divisi"]);
+    sheetUsers.appendRow(["Username", "Password", "Role", "Folder"]);
     sheetUsers.appendRow(["admin", "admin123", "Super Admin", "All"]);
   }
   
@@ -103,7 +103,7 @@ function tambahLemariBaruWeb(namaLemariBaru, currentUserRole) {
     var sheetBaru = ss.getSheetByName(kodeSheet);
     if (!sheetBaru) {
       sheetBaru = ss.insertSheet(kodeSheet);
-      sheetBaru.appendRow(["Divisi", "Nama Dokumen", "Tempat Peletakan", "Masa Retensi", "Link File", "User Input"]);
+      sheetBaru.appendRow(["Nama Folder Berkas", "Nama Dokumen", "Tempat Peletakan", "Masa Retensi", "Link File", "User Input"]);
     }
     
     return { status: "success", message: "Lemari '" + namaClean + "' berhasil ditambahkan!" };
@@ -119,7 +119,7 @@ function ambilDataArsip(userDivisi, userRole) {
     var lemariList = resLemari.status === "success" ? resLemari.data : [];
     
     var semuaData = [];
-    var statistikData = { "Total": 0, "SDM": 0, "Keuangan": 0, "Sistem Informasi": 0, "Distribusi": 0 };
+    var statistikData = { "Total": 0, "PFK": 0, "ESTETIKA": 0, "Pelanggan TM": 0, "SPKLU": 0 };
     
     lemariList.forEach(function(l) {
       statistikData[l.nama] = 0;
@@ -143,7 +143,7 @@ function ambilDataArsip(userDivisi, userRole) {
             formattedDate = data[j][3];
           }
           
-          if (!isAdmin && div.toLowerCase() !== userDivisi.toLowerCase()) {
+          if (!isAdmin && userDivisi !== "All" && div.toLowerCase() !== userDivisi.toLowerCase()) {
             continue;
           }
 
@@ -183,7 +183,6 @@ function uploadFileToDrive(base64Data, fileName, divisi, masaRetensi) {
     var fileData = Utilities.base64Decode(splitData[1]);
     var blob = Utilities.newBlob(fileData, contentType, fileName);
     
-    // Ambil tahun dari Masa Retensi (atau tahun berjalan jika kosong)
     var tahun = new Date().getFullYear().toString();
     if (masaRetensi) {
       var thnRetensi = masaRetensi.split('-')[0];
@@ -192,13 +191,8 @@ function uploadFileToDrive(base64Data, fileName, divisi, masaRetensi) {
       }
     }
     
-    // Dapatkan folder tujuan hirarki (Arsip Digital PLN > Divisi > Tahun)
     var targetFolder = getFolderTujuan(divisi, tahun);
-    
-    // Simpan file ke folder tujuan
     var file = targetFolder.createFile(blob);
-    
-    // Set hak akses file publik agar bisa dibuka dari tabel
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     
     return {
@@ -216,17 +210,14 @@ function uploadFileToDrive(base64Data, fileName, divisi, masaRetensi) {
 // HELPER FUNCTION: Dapatkan/Buat Hirarki Folder di Drive
 function getFolderTujuan(divisi, tahun) {
   var parentName = "Arsip Digital PLN";
-  var divisiName = divisi ? "Divisi " + divisi : "Umum";
+  var divisiName = divisi ? "Folder " + divisi : "Umum";
   
-  // 1. Cek / Buat Folder Utama "Arsip Digital PLN"
   var mainFolders = DriveApp.getFoldersByName(parentName);
   var mainFolder = mainFolders.hasNext() ? mainFolders.next() : DriveApp.createFolder(parentName);
   
-  // 2. Cek / Buat Sub-folder Divisi
   var divisiFolders = mainFolder.getFoldersByName(divisiName);
   var divisiFolder = divisiFolders.hasNext() ? divisiFolders.next() : mainFolder.createFolder(divisiName);
   
-  // 3. Cek / Buat Sub-folder Tahun
   var tahunFolders = divisiFolder.getFoldersByName(tahun);
   var tahunFolder = tahunFolders.hasNext() ? tahunFolders.next() : divisiFolder.createFolder(tahun);
   
@@ -241,7 +232,7 @@ function simpanArsip(data) {
     
     if (!sheet) {
       sheet = ss.insertSheet(namaSheetTujuan);
-      sheet.appendRow(["Divisi", "Nama Dokumen", "Tempat Peletakan", "Masa Retensi", "Link File", "User Input"]);
+      sheet.appendRow(["Nama Folder Berkas", "Nama Dokumen", "Tempat Peletakan", "Masa Retensi", "Link File", "User Input"]);
     }
     
     sheet.appendRow([
@@ -309,7 +300,7 @@ function updateArsipWeb(dataLama, dataBaru, userRole, currentUsername) {
       sheetLama.deleteRow(barisDitemukan);
       if (!sheetBaru) {
         sheetBaru = ss.insertSheet(dataBaru.kategori.replace(/\s+/g, '_'));
-        sheetBaru.appendRow(["Divisi", "Nama Dokumen", "Tempat Peletakan", "Masa Retensi", "Link File", "User Input"]);
+        sheetBaru.appendRow(["Nama Folder Berkas", "Nama Dokumen", "Tempat Peletakan", "Masa Retensi", "Link File", "User Input"]);
       }
       sheetBaru.appendRow([
         dataBaru.divisi, dataBaru.namaDokumen, dataBaru.kategori, dataBaru.masaRetensi, dataBaru.linkFile, dataLama.userInput
