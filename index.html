@@ -636,7 +636,6 @@
         bsModalTambahLemari = new bootstrap.Modal(document.getElementById('modalTambahLemari'));
         bsModalPreviewPdf = new bootstrap.Modal(document.getElementById('modalPreviewPdf'));
 
-        // DETEKSI LOGOUT OTOMATIS SAAT TAB DITUTUP
         var tabActiveFlag = sessionStorage.getItem("pln_tab_active");
 
         if (!tabActiveFlag) {
@@ -683,12 +682,10 @@
         }
       });
 
-      // FITUR POIN 3: PREVIEW PDF DIRECT DALAM MODAL
       function bukaPreviewPdf(namaDokumen, urlDrive) {
         document.getElementById('titlePreviewPdf').innerHTML = `<i class="fa-solid fa-file-pdf me-2 text-danger"></i> ${namaDokumen}`;
         document.getElementById('btnBukaTabBaruPdf').href = urlDrive;
         
-        // Ubah URL Drive view biasa ke mode embed/preview Google Drive
         var embedUrl = urlDrive.replace(/\/view(\?.*)?$/, '/preview');
         if (!embedUrl.includes('/preview')) {
           embedUrl = urlDrive;
@@ -698,7 +695,6 @@
         bsModalPreviewPdf.show();
       }
 
-      // FITUR POIN 3: INDIKATOR REAL-TIME UKURAN FILE PDF
       function cekUkuranFilePdf(input) {
         var fileInfo = document.getElementById('fileSizeInfo');
         var btnSubmit = document.getElementById('btnSubmitArsip');
@@ -722,14 +718,12 @@
         }
       }
 
-      // FITUR POIN 3: EXPORT TABLE DATA TO EXCEL
       function exportDataToExcel() {
         if (!filteredDataArsip || filteredDataArsip.length === 0) {
           alert("Tidak ada data dokumen untuk diexport!");
           return;
         }
 
-        // Format data yang rapi untuk Excel
         var excelData = filteredDataArsip.map(function(item, idx) {
           return {
             "No": idx + 1,
@@ -746,15 +740,14 @@
         var workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Data Arsip");
 
-        // Format Lebar Kolom Otomatis
         worksheet['!cols'] = [
-          { wch: 5 },  // No
-          { wch: 20 }, // Divisi
-          { wch: 35 }, // Nama
-          { wch: 18 }, // Lemari
-          { wch: 15 }, // Retensi
-          { wch: 45 }, // Link
-          { wch: 18 }  // User
+          { wch: 5 },
+          { wch: 20 },
+          { wch: 35 },
+          { wch: 18 },
+          { wch: 15 },
+          { wch: 45 },
+          { wch: 18 }
         ];
 
         var tglFormat = new Date().toISOString().slice(0, 10);
@@ -993,7 +986,6 @@
               tombolAksiHtml = `<span class="text-muted small">-</span>`;
             }
 
-            // DENGAN TOMBOL PREVIEW PDF DI TABEL
             tr.innerHTML = `
               <td><span class="badge bg-secondary p-2">${item.divisi}</span></td>
               <td class="fw-semibold">${item.namaDokumen}</td>
@@ -1302,6 +1294,7 @@
         }
       });
 
+      // PEMBARUAN PADA PENANGANAN SUBMIT FORM DOKUMEN (MENGIRIM PARAMETER DIVISI & MASA RETENSI)
       document.getElementById('formArsip').addEventListener('submit', function(e) {
         e.preventDefault();
         
@@ -1326,16 +1319,20 @@
         reader.onload = function(evt) {
           var base64Data = evt.target.result;
           
+          // Ambil nilai Divisi dan Masa Retensi untuk pengorganisasian Folder Drive
+          var divVal = document.getElementById('divisi').value;
+          var retensiVal = document.getElementById('masaRetensi').value;
+
           google.script.run.withSuccessHandler(function(resUpload) {
             if (resUpload.status === "success") {
               
               notifDiv.innerHTML = '<div class="alert alert-info text-center shadow-sm"><i class="fa-solid fa-spinner fa-spin me-2"></i> File diunggah. Menyimpan data arsip ke spreadsheet...</div>';
               
               var data = {
-                divisi: document.getElementById('divisi').value,
+                divisi: divVal,
                 namaDokumen: document.getElementById('namaDokumen').value,
                 kategori: document.getElementById('kategori').value,
-                masaRetensi: document.getElementById('masaRetensi').value,
+                masaRetensi: retensiVal,
                 linkFile: resUpload.url,
                 userInput: sessionUser
               };
@@ -1357,7 +1354,7 @@
             } else {
               notifDiv.innerHTML = '<div class="alert alert-danger text-center shadow-sm"><i class="fa-solid fa-circle-exclamation me-2"></i> Gagal Upload PDF: ' + resUpload.message + '</div>';
             }
-          }).uploadFileToDrive(base64Data, file.name);
+          }).uploadFileToDrive(base64Data, file.name, divVal, retensiVal); // Parameter ditambahkan di sini
         };
         
         reader.readAsDataURL(file);
