@@ -22,20 +22,20 @@ function getorceretmaindra() {
     sheetUsers.appendRow(["admin", "admin123", "Super Admin", "All"]);
   }
   
-  // Sheet Master_Lemari (Kolom: Nama Lemari, Bantex, Kode Sheet)
+  // Sheet Master_Lemari (Kolom: Nama Lemari, Ordner, Kode Sheet)
   var sheetLemari = ss.getSheetByName("Master_Lemari");
   if (!sheetLemari) {
     sheetLemari = ss.insertSheet("Master_Lemari");
-    sheetLemari.appendRow(["Nama Lemari", "Bantex", "Kode Sheet"]);
-    sheetLemari.appendRow(["Lemari A", "Bantex 01", "Lemari_A"]);
-    sheetLemari.appendRow(["Lemari A", "Bantex 02", "Lemari_A"]);
-    sheetLemari.appendRow(["Lemari B", "Bantex 01", "Lemari_B"]);
-    sheetLemari.appendRow(["Lemari C", "Bantex 01", "Lemari_C"]);
-    sheetLemari.appendRow(["Lemari D", "Bantex 01", "Lemari_D"]);
+    sheetLemari.appendRow(["Nama Lemari", "Ordner", "Kode Sheet"]);
+    sheetLemari.appendRow(["Lemari A", "Ordner 01", "Lemari_A"]);
+    sheetLemari.appendRow(["Lemari A", "Ordner 02", "Lemari_A"]);
+    sheetLemari.appendRow(["Lemari B", "Ordner 01", "Lemari_B"]);
+    sheetLemari.appendRow(["Lemari C", "Ordner 01", "Lemari_C"]);
+    sheetLemari.appendRow(["Lemari D", "Ordner 01", "Lemari_D"]);
   } else {
-    // Jalankan migrasi jika header masih versi lama
+    // Migrasi otomatis header jika masih versi lama
     if (sheetLemari.getLastColumn() < 3) {
-      sheetLemari.getRange(1, 1, 1, 3).setValues([["Nama Lemari", "Bantex", "Kode Sheet"]]);
+      sheetLemari.getRange(1, 1, 1, 3).setValues([["Nama Lemari", "Ordner", "Kode Sheet"]]);
     }
   }
 }
@@ -74,7 +74,7 @@ function ambilDaftarLemari() {
 
     for (var i = 1; i < data.length; i++) {
       var namaLemari = data[i][0] ? data[i][0].toString().trim() : "";
-      var subLemari = data[i][1] ? data[i][1].toString().trim() : "Bantex 01";
+      var subLemari = data[i][1] ? data[i][1].toString().trim() : "Ordner 01";
       var kodeSheet = data[i][2] ? data[i][2].toString().trim() : namaLemari.replace(/\s+/g, '_');
 
       if (namaLemari) {
@@ -111,14 +111,14 @@ function tambahLemariBaruWeb(namaLemariBaru, subLemariBaru, currentUserRole) {
     }
     
     var namaClean = namaLemariBaru.trim();
-    var subClean = subLemariBaru ? subLemariBaru.trim() : "Bantex 01";
+    var subClean = subLemariBaru ? subLemariBaru.trim() : "Ordner 01";
     var kodeSheet = namaClean.replace(/\s+/g, '_');
     
     var data = sheetMaster.getDataRange().getValues();
     for (var i = 1; i < data.length; i++) {
       if (data[i][0].toString().toLowerCase() === namaClean.toLowerCase() &&
           data[i][1].toString().toLowerCase() === subClean.toLowerCase()) {
-        return { status: "error", message: "Bantex tersebut sudah ada di " + namaClean + "!" };
+        return { status: "error", message: "Ordner tersebut sudah ada di " + namaClean + "!" };
       }
     }
     
@@ -127,7 +127,7 @@ function tambahLemariBaruWeb(namaLemariBaru, subLemariBaru, currentUserRole) {
     var sheetBaru = ss.getSheetByName(kodeSheet);
     if (!sheetBaru) {
       sheetBaru = ss.insertSheet(kodeSheet);
-      sheetBaru.appendRow(["Nama Folder Berkas", "Nama Dokumen", "Tempat Peletakan", "Bantex", "Masa Retensi", "Link File", "User Input"]);
+      sheetBaru.appendRow(["Nama Folder Berkas", "Nama Dokumen", "Tempat Peletakan", "Ordner", "Masa Retensi", "Link File", "User Input"]);
     }
     
     return { status: "success", message: "Lemari '" + namaClean + " (" + subClean + ")' berhasil ditambahkan!" };
@@ -166,7 +166,7 @@ function ambilDataArsip(userDivisi, userRole) {
           var linkIndex = 4;
           var userIndex = 5;
 
-          // Deteksi apakah sheet menggunakan format 7 Kolom (Memiliki Kolom Bantex)
+          // Deteksi format 7 Kolom (Kolom Ordner)
           if (numCols >= 7) {
             subLemariVal = data[j][3] ? data[j][3].toString().trim() : "";
             retensiIndex = 4;
@@ -189,7 +189,7 @@ function ambilDataArsip(userDivisi, userRole) {
             divisi: div,
             namaDokumen: data[j][1],
             kategori: lemariRaw,
-            subLemari: subLemariVal || "Bantex 01",
+            subLemari: subLemariVal || "Ordner 01",
             masaRetensi: formattedDate,
             linkFile: data[j][linkIndex],
             userInput: data[j][userIndex]
@@ -269,20 +269,20 @@ function simpanArsip(data) {
     
     if (!sheet) {
       sheet = ss.insertSheet(namaSheetTujuan);
-      sheet.appendRow(["Nama Folder Berkas", "Nama Dokumen", "Tempat Peletakan", "Bantex", "Masa Retensi", "Link File", "User Input"]);
+      sheet.appendRow(["Nama Folder Berkas", "Nama Dokumen", "Tempat Peletakan", "Ordner", "Masa Retensi", "Link File", "User Input"]);
     } else {
       if (sheet.getLastColumn() < 7) {
         sheet.insertColumnAfter(3);
-        sheet.getRange(1, 4).setValue("Bantex");
+        sheet.getRange(1, 4).setValue("Ordner");
       }
     }
     
     sheet.appendRow([
-      data.divisi, data.namaDokumen, data.kategori, data.subLemari || "Bantex 01", data.masaRetensi, data.linkFile, data.userInput
+      data.divisi, data.namaDokumen, data.kategori, data.subLemari || "Ordner 01", data.masaRetensi, data.linkFile, data.userInput
     ]);
     
     sortSheetRetensi(sheet);
-    return { status: "success", message: "Data arsip berhasil disimpan di " + data.kategori + " (" + (data.subLemari || "Bantex 01") + ")!" };
+    return { status: "success", message: "Data arsip berhasil disimpan di " + data.kategori + " (" + (data.subLemari || "Ordner 01") + ")!" };
   } catch (error) {
     return { status: "error", message: error.toString() };
   }
@@ -344,15 +344,15 @@ function updateArsipWeb(dataLama, dataBaru, userRole, currentUsername) {
       sheetLama.deleteRow(barisDitemukan);
       if (!sheetBaru) {
         sheetBaru = ss.insertSheet(dataBaru.kategori.replace(/\s+/g, '_'));
-        sheetBaru.appendRow(["Nama Folder Berkas", "Nama Dokumen", "Tempat Peletakan", "Bantex", "Masa Retensi", "Link File", "User Input"]);
+        sheetBaru.appendRow(["Nama Folder Berkas", "Nama Dokumen", "Tempat Peletakan", "Ordner", "Masa Retensi", "Link File", "User Input"]);
       }
       sheetBaru.appendRow([
-        dataBaru.divisi, dataBaru.namaDokumen, dataBaru.kategori, dataBaru.subLemari || "Bantex 01", dataBaru.masaRetensi, dataBaru.linkFile, dataLama.userInput
+        dataBaru.divisi, dataBaru.namaDokumen, dataBaru.kategori, dataBaru.subLemari || "Ordner 01", dataBaru.masaRetensi, dataBaru.linkFile, dataLama.userInput
       ]);
       sortSheetRetensi(sheetBaru);
     } else {
       sheetLama.getRange(barisDitemukan, 1, 1, 7).setValues([[
-        dataBaru.divisi, dataBaru.namaDokumen, dataBaru.kategori, dataBaru.subLemari || "Bantex 01", dataBaru.masaRetensi, dataBaru.linkFile, dataLama.userInput
+        dataBaru.divisi, dataBaru.namaDokumen, dataBaru.kategori, dataBaru.subLemari || "Ordner 01", dataBaru.masaRetensi, dataBaru.linkFile, dataLama.userInput
       ]]);
       sortSheetRetensi(sheetLama);
     }
