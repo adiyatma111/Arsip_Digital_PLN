@@ -271,7 +271,7 @@
           <div class="d-flex justify-content-between align-items-center mb-4">
             <h4 class="fw-bold text-dark m-0"><i class="fa-solid fa-file-pen me-2 text-primary"></i>Form Input Dokumen</h4>
             <button type="button" class="btn btn-outline-success btn-sm d-none" id="btnTambahLemariInput" onclick="bukaModalTambahLemari()" style="border-radius: 12px; font-weight:600;">
-              <i class="fa-solid fa-plus me-1"></i> Tambah Lemari Baru
+              <i class="fa-solid fa-plus me-1"></i> Tambah Lemari / Bantex Baru
             </button>
           </div>
           <form id="formArsip">
@@ -297,15 +297,24 @@
                 </div>
               </div>
               <div class="col-md-4 mb-3">
-                <label class="form-label">Tempat Peletakan Arsip</label>
+                <label class="form-label">Tempat Peletakan Arsip (Lemari)</label>
                 <div class="input-group">
                   <span class="input-group-text"><i class="fa-solid fa-box-archive"></i></span>
-                  <select class="form-select" id="kategori" required>
+                  <select class="form-select" id="kategori" required onchange="updateSubLemariDropdown('kategori', 'subLemari')">
                     <option value="">Memuat daftar lemari...</option>
                   </select>
                 </div>
               </div>
-              <div class="col-md-6 mb-3">
+              <div class="col-md-4 mb-3">
+                <label class="form-label">Bantex</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fa-solid fa-layer-group"></i></span>
+                  <select class="form-select" id="subLemari" required disabled>
+                    <option value="">-- Pilih Lemari Terlebih Dahulu --</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-md-4 mb-3">
                 <label class="form-label">Masa Berlaku / Retensi</label>
                 <div class="input-group">
                   <span class="input-group-text"><i class="fa-solid fa-calendar-check"></i></span>
@@ -313,8 +322,8 @@
                 </div>
               </div>
               
-              <div class="col-md-6 mb-3">
-                <label class="form-label">Upload File Dokumen (PDF - Maks 5MB)</label>
+              <div class="col-md-4 mb-3">
+                <label class="form-label">Upload File PDF (Maks 5MB)</label>
                 <div class="input-group">
                   <span class="input-group-text"><i class="fa-solid fa-file-pdf"></i></span>
                   <input type="file" class="form-control" id="filePdf" accept="application/pdf" required onchange="cekUkuranFilePdf(this)">
@@ -333,15 +342,18 @@
           <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
             <h4 class="fw-bold text-dark m-0"><i class="fa-solid fa-database me-2 text-success"></i>Data Monitoring Masa Retensi</h4>
             <div class="d-flex gap-2 flex-wrap">
-              <select id="filterDivisi" class="form-select style-search" style="border-left: 1px solid #cbd5e1; border-radius: 12px; width: 170px; padding: 6px 12px; font-size: 0.9rem;">
+              <select id="filterDivisi" class="form-select style-search" style="border-left: 1px solid #cbd5e1; border-radius: 12px; width: 150px; padding: 6px 12px; font-size: 0.9rem;">
                 <option value="SEMUA">Semua Folder</option>
                 <option value="PFK">PFK</option>
                 <option value="ESTETIKA">ESTETIKA</option>
                 <option value="Pelanggan TM">Pelanggan TM</option>
                 <option value="SPKLU">SPKLU</option>
               </select>
-              <select id="filterLemari" class="form-select style-search" style="border-left: 1px solid #cbd5e1; border-radius: 12px; width: 160px; padding: 6px 12px; font-size: 0.9rem;">
+              <select id="filterLemari" class="form-select style-search" style="border-left: 1px solid #cbd5e1; border-radius: 12px; width: 150px; padding: 6px 12px; font-size: 0.9rem;" onchange="updateSubLemariDropdown('filterLemari', 'filterSubLemari'); jalankanFilterDanCari();">
                 <option value="SEMUA">Semua Lemari</option>
+              </select>
+              <select id="filterSubLemari" class="form-select style-search" style="border-left: 1px solid #cbd5e1; border-radius: 12px; width: 150px; padding: 6px 12px; font-size: 0.9rem;">
+                <option value="SEMUA">Semua Bantex</option>
               </select>
               <input type="text" id="cariDokumen" class="form-control style-search" placeholder="Cari Lemari / Nama / Tanggal..." style="border-left: 1px solid #cbd5e1; border-radius: 12px; width: 200px; padding: 6px 12px; font-size: 0.9rem;">
               <button class="btn btn-success btn-sm px-3" onclick="exportDataToExcel()" style="border-radius: 12px; font-weight: 600;">
@@ -378,7 +390,7 @@
             <h4 class="fw-bold text-dark mb-0"><i class="fa-solid fa-users-gear me-2 text-primary"></i>Manajemen Akses Pengguna</h4>
             <div class="d-flex gap-2">
               <button class="btn btn-outline-success btn-sm px-3" style="border-radius: 12px; padding: 6px 16px;" onclick="bukaModalTambahLemari()">
-                <i class="fa-solid fa-box-archive me-2"></i>Tambah Lemari Baru
+                <i class="fa-solid fa-box-archive me-2"></i>Tambah Lemari / Bantex
               </button>
               <button class="btn btn-primary btn-sm px-3" style="border-radius: 12px; padding: 6px 16px;" onclick="bukaModalTambahUser()">
                 <i class="fa-solid fa-user-plus me-2"></i>Tambah User Baru
@@ -461,7 +473,11 @@
               </div>
               <div class="mb-3">
                 <label class="form-label">Lokasi Lemari</label>
-                <select class="form-select shadow-sm" id="editKategori" required></select>
+                <select class="form-select shadow-sm" id="editKategori" required onchange="updateSubLemariDropdown('editKategori', 'editSubLemari')"></select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Bantex</label>
+                <select class="form-select shadow-sm" id="editSubLemari" required></select>
               </div>
               <div class="mb-3">
                 <label class="form-label">Masa Retensi</label>
@@ -486,19 +502,23 @@
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-radius: 20px;">
           <div class="modal-header bg-light">
-            <h5 class="modal-title fw-bold text-success"><i class="fa-solid fa-box-archive me-2"></i>Tambah Lemari Baru</h5>
+            <h5 class="modal-title fw-bold text-success"><i class="fa-solid fa-box-archive me-2"></i>Tambah Lemari / Bantex Baru</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body p-4">
             <form id="formTambahLemari">
               <div class="mb-3">
-                <label class="form-label">Nama Lemari Baru</label>
-                <input type="text" class="form-control shadow-sm" id="tambahNamaLemari" required style="border-left:1px solid #cbd5e1; border-radius:12px;" placeholder="Contoh: Lemari E, Lemari Khusus VIP">
+                <label class="form-label">Nama Lemari Utama</label>
+                <input type="text" class="form-control shadow-sm" id="tambahNamaLemari" required style="border-left:1px solid #cbd5e1; border-radius:12px;" placeholder="Contoh: Lemari A, Lemari Keuangan">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Nama / Nomor Bantex</label>
+                <input type="text" class="form-control shadow-sm" id="tambahSubLemari" required style="border-left:1px solid #cbd5e1; border-radius:12px;" placeholder="Contoh: Bantex 01, Bantex Keuangan A">
               </div>
               <div id="notifTambahLemari" class="mt-2"></div>
               <div class="d-flex gap-2 mt-4 justify-content-end">
                 <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal" style="border-radius: 12px;">Batal</button>
-                <button type="submit" class="btn btn-success px-4" style="border-radius: 12px; font-weight:600;"><i class="fa-solid fa-plus me-1"></i> Buat Lemari</button>
+                <button type="submit" class="btn btn-success px-4" style="border-radius: 12px; font-weight:600;"><i class="fa-solid fa-plus me-1"></i> Buat Lemari / Bantex</button>
               </div>
             </form>
           </div>
@@ -730,6 +750,7 @@
             "Nama Folder": item.divisi,
             "Nama Dokumen": item.namaDokumen,
             "Lokasi Lemari": item.kategori,
+            "Bantex": item.subLemari || "Bantex 01",
             "Masa Retensi": item.masaRetensi,
             "Link Google Drive": item.linkFile,
             "User Penginput": item.userInput
@@ -744,6 +765,7 @@
           { wch: 5 },
           { wch: 20 },
           { wch: 35 },
+          { wch: 18 },
           { wch: 18 },
           { wch: 15 },
           { wch: 45 },
@@ -915,6 +937,41 @@
         if (valInputLama) selFormInput.value = valInputLama;
         if (valFilterLama) selFilter.value = valFilterLama;
         if (valEditLama) selEdit.value = valEditLama;
+
+        updateSubLemariDropdown('kategori', 'subLemari');
+        updateSubLemariDropdown('filterLemari', 'filterSubLemari');
+        updateSubLemariDropdown('editKategori', 'editSubLemari');
+      }
+
+      function updateSubLemariDropdown(lemariSelectId, subLemariSelectId) {
+        var lemariVal = document.getElementById(lemariSelectId).value;
+        var subSelect = document.getElementById(subLemariSelectId);
+        
+        if (!subSelect) return;
+        subSelect.innerHTML = "";
+        
+        if (lemariSelectId === "filterLemari" && (lemariVal === "SEMUA" || !lemariVal)) {
+          subSelect.innerHTML = '<option value="SEMUA">Semua Bantex</option>';
+          subSelect.removeAttribute("disabled");
+          return;
+        }
+
+        var lemariObj = masterLemariList.find(l => l.nama === lemariVal);
+        
+        if (lemariObj && lemariObj.subList && lemariObj.subList.length > 0) {
+          subSelect.removeAttribute("disabled");
+          if (lemariSelectId === "filterLemari") {
+            subSelect.innerHTML = '<option value="SEMUA">Semua Bantex</option>';
+          } else {
+            subSelect.innerHTML = '<option value="">Pilih Bantex...</option>';
+          }
+          lemariObj.subList.forEach(function(sub) {
+            subSelect.innerHTML += `<option value="${sub}">${sub}</option>`;
+          });
+        } else {
+          subSelect.innerHTML = '<option value="">-- Tidak ada Bantex --</option>';
+          subSelect.setAttribute("disabled", "true");
+        }
       }
 
       function renderStatistikLemari(statistik, lemariList) {
@@ -986,10 +1043,12 @@
               tombolAksiHtml = `<span class="text-muted small">-</span>`;
             }
 
+            var lokasiLengkap = `<i class="fa-solid fa-box text-warning me-1"></i> ${item.kategori} <i class="fa-solid fa-chevron-right text-muted mx-1" style="font-size: 0.75rem;"></i> <span class="badge bg-light text-dark border">${item.subLemari || 'Bantex 01'}</span>`;
+
             tr.innerHTML = `
               <td><span class="badge bg-secondary p-2">${item.divisi}</span></td>
               <td class="fw-semibold">${item.namaDokumen}</td>
-              <td><i class="fa-solid fa-box text-warning me-1"></i> ${item.kategori}</td>
+              <td>${lokasiLengkap}</td>
               <td class="fw-bold text-danger">${item.masaRetensi}</td>
               <td class="text-center">
                 <div class="btn-group btn-group-sm">
@@ -1018,6 +1077,10 @@
         document.getElementById('editDivisi').value = item.divisi;
         document.getElementById('editNamaDokumen').value = item.namaDokumen;
         document.getElementById('editKategori').value = item.kategori;
+        
+        updateSubLemariDropdown('editKategori', 'editSubLemari');
+        document.getElementById('editSubLemari').value = item.subLemari || "Bantex 01";
+        
         document.getElementById('editMasaRetensi').value = item.masaRetensi;
         document.getElementById('editLinkFile').value = item.linkFile;
         document.getElementById('notifEdit').innerHTML = "";
@@ -1034,6 +1097,7 @@
           divisi: document.getElementById('editDivisi').value,
           namaDokumen: document.getElementById('editNamaDokumen').value,
           kategori: document.getElementById('editKategori').value,
+          subLemari: document.getElementById('editSubLemari').value,
           masaRetensi: document.getElementById('editMasaRetensi').value,
           linkFile: document.getElementById('editLinkFile').value
         };
@@ -1150,7 +1214,8 @@
         e.preventDefault();
         var notif = document.getElementById('notifTambahLemari');
         var namaBaru = document.getElementById('tambahNamaLemari').value;
-        notif.innerHTML = '<div class="alert alert-info py-2 text-center small"><i class="fa-solid fa-spinner fa-spin me-2"></i>Membuat lemari baru...</div>';
+        var subBaru = document.getElementById('tambahSubLemari').value;
+        notif.innerHTML = '<div class="alert alert-info py-2 text-center small"><i class="fa-solid fa-spinner fa-spin me-2"></i>Membuat lemari/bantex baru...</div>';
         
         google.script.run.withSuccessHandler(function(res) {
           if (res.status === "success") {
@@ -1162,7 +1227,7 @@
           } else {
             notif.innerHTML = '<div class="alert alert-danger py-2 text-center small">' + res.message + '</div>';
           }
-        }).tambahLemariBaruWeb(namaBaru, sessionRole);
+        }).tambahLemariBaruWeb(namaBaru, subBaru, sessionRole);
       });
 
       function bukaModalTambahUser() {
@@ -1257,20 +1322,22 @@
       }
 
       document.getElementById('filterDivisi').addEventListener('change', jalankanFilterDanCari);
-      document.getElementById('filterLemari').addEventListener('change', jalankanFilterDanCari);
+      document.getElementById('filterSubLemari').addEventListener('change', jalankanFilterDanCari);
       document.getElementById('cariDokumen').addEventListener('input', jalankanFilterDanCari);
 
       function jalankanFilterDanCari() {
         var pilihanDivisi = document.getElementById('filterDivisi').value;
         var pilihanLemari = document.getElementById('filterLemari').value;
+        var pilihanSubLemari = document.getElementById('filterSubLemari').value;
         var kataKunci = document.getElementById('cariDokumen').value.toLowerCase();
         
         filteredDataArsip = masterDataArsip.filter(function(item) {
           var cocokDivisi = (pilihanDivisi === "SEMUA" || item.divisi === pilihanDivisi);
           var cocokLemari = (pilihanLemari === "SEMUA" || item.kategori === pilihanLemari);
-          var teksGabungan = (item.divisi + " " + item.namaDokumen + " " + item.kategori + " " + item.masaRetensi + " " + item.userInput).toLowerCase();
+          var cocokSubLemari = (pilihanSubLemari === "SEMUA" || (item.subLemari || "Bantex 01") === pilihanSubLemari);
+          var teksGabungan = (item.divisi + " " + item.namaDokumen + " " + item.kategori + " " + (item.subLemari || "") + " " + item.masaRetensi + " " + item.userInput).toLowerCase();
           var cocokKataKunci = teksGabungan.includes(kataKunci);
-          return cocokDivisi && cocokLemari && cocokKataKunci;
+          return cocokDivisi && cocokLemari && cocokSubLemari && cocokKataKunci;
         });
         
         limitTampil = 20;
@@ -1330,6 +1397,7 @@
                 divisi: divVal,
                 namaDokumen: document.getElementById('namaDokumen').value,
                 kategori: document.getElementById('kategori').value,
+                subLemari: document.getElementById('subLemari').value,
                 masaRetensi: retensiVal,
                 linkFile: resUpload.url,
                 userInput: sessionUser
@@ -1340,6 +1408,8 @@
                   notifDiv.innerHTML = '<div class="alert alert-success text-center shadow-sm"><i class="fa-solid fa-circle-check me-2"></i> ' + res.message + '</div>';
                   document.getElementById('namaDokumen').value = "";
                   document.getElementById('kategori').value = "";
+                  document.getElementById('subLemari').value = "";
+                  document.getElementById('subLemari').setAttribute("disabled", "true");
                   document.getElementById('masaRetensi').value = "";
                   document.getElementById('filePdf').value = "";
                   document.getElementById('fileSizeInfo').innerHTML = "";
